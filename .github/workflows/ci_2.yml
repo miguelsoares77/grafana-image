@@ -1,0 +1,43 @@
+name: CI - Registry
+
+on:
+  push:
+    branches: [ dev]
+  #pull_request:
+  #  branches: [ dev ]
+
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: [self-hosted, Linux, x64, docker]
+    # runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+      packages: write
+
+    steps: 
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      
+      - name: Run a multi-line script
+        env:
+          ENV: dev
+          REGISTRY_USR_NAME: ${{ secrets.REGISTRY_USR_NAME }}
+          REGISTRY_USR_PASS: ${{ secrets.REGISTRY_USR_PASS }}
+          REGISTRY: ${{ secrets.REGISTRY }}
+        run: bash builds/build.sh publish
+      
+      - name: Set branch name
+        run: echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
+      - name: Set version
+        run: echo "VERSION=`cat version.txt`" >> $GITHUB_ENV
+      
+      - name: Update Tag
+        uses: richardsimko/update-tag@v1.0.5
+        with:
+          tag_name: v${{ env.VERSION }}-${{ env.BRANCH }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
